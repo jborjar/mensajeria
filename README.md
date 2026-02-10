@@ -56,9 +56,7 @@ flowchart TB
     style messaging fill:#c8e6c9
     style crm fill:#ffe0b2
     style storage fill:#f8bbd0
-
-
-``````
+```
 
 ## Guias Rapidas
 
