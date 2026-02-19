@@ -159,14 +159,16 @@ docker compose up -d
 
 ## Acceso a Servicios
 
-Los servicios estan expuestos internamente en la red Docker. Para acceso externo, usar Nginx Proxy Manager.
+Los servicios estan expuestos en los siguientes puertos:
 
-| Servicio | URL Interna | Ejemplo NPM |
-|----------|-------------|-------------|
-| Postfix | smtp://postfix:25 | - |
-| Evolution API | http://evolution:8080 | api.tudominio.com |
-| Chatwoot | http://chatwoot:3000 | chat.tudominio.com |
-| Mautic | http://mautic:80 | marketing.tudominio.com |
+| Servicio | Puerto | URL Local | Ejemplo NPM |
+|----------|--------|-----------|-------------|
+| Postfix | 25 (interno) | smtp://postfix:25 | - |
+| Evolution API | 8080 | http://IP_SERVIDOR:8080 | api.tudominio.com |
+| Chatwoot | 3000 | http://IP_SERVIDOR:3000 | chat.tudominio.com |
+| Mautic | 8081 | http://IP_SERVIDOR:8081 | marketing.tudominio.com |
+
+> **Nota**: Los puertos estan expuestos directamente para facilitar la integracion con servicios externos (como el Orquestador en otro servidor).
 
 ## Estructura de Archivos
 
@@ -401,16 +403,27 @@ Documentacion oficial: https://doc.evolution-api.com
 
 ## Integracion con Orquestador
 
-El stack messaging se integra automaticamente con el stack `orquestador` para respuestas automaticas con inteligencia artificial.
+El stack messaging se integra con el stack `orquestador` (puede estar en otro servidor) para respuestas automaticas con inteligencia artificial.
+
+### Arquitectura Multi-Servidor
+
+```
+Servidor 172.16.1.58 (mensajeria)     Servidor 172.16.1.57 (IA)
+┌─────────────────────────┐           ┌─────────────────────────┐
+│  Evolution API :8080    │◄─────────►│  Orquestador :8000      │
+│  Chatwoot :3000         │  webhook  │  Agente IA (STT/LLM/TTS)│
+│  Mautic :8081           │           │                         │
+└─────────────────────────┘           └─────────────────────────┘
+```
 
 ### Webhooks multiples
 
-Evolution API soporta multiples webhooks por instancia. El `init.sh` configura dos:
+Evolution API soporta multiples webhooks por instancia:
 
 | Webhook | URL | Funcion |
 |---------|-----|---------|
 | **Chatwoot** | Integracion nativa | Mensajes aparecen en centro de soporte |
-| **Orquestador** | `http://orquestador:80/webhook/evolution` | Respuestas automaticas con IA |
+| **Orquestador** | `http://172.16.1.57:8000/webhook/evolution` | Respuestas automaticas con IA |
 
 Ambos webhooks funcionan en paralelo:
 - Los mensajes llegan a Chatwoot para gestion humana
@@ -440,28 +453,39 @@ Chatwoot   Orquestador
    respuesta IA
 ```
 
-### Configuracion automatica
+### Configuracion del Webhook
 
-El webhook del orquestador se configura automaticamente al ejecutar `init.sh`:
+Configurar el webhook en Evolution Manager (`http://IP_SERVIDOR:8080/manager`):
+
+1. Entrar a la instancia de WhatsApp
+2. Ir a la seccion **Webhooks**
+3. Agregar webhook:
+   - **URL**: `http://172.16.1.57:8000/webhook/evolution`
+   - **Events**: `MESSAGES_UPSERT`, `CONNECTION_UPDATE`
+
+O via API:
 
 ```bash
-# Webhook Orquestador configurado en init.sh
-POST http://evolution:8080/webhook/set/whatsapp_main
-{
+source .env
+curl -X POST "http://localhost:8080/webhook/set/whatsapp_main" \
+  -H "apikey: $AUTHENTICATION_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
     "webhook": {
         "enabled": true,
-        "url": "http://orquestador:80/webhook/evolution",
+        "url": "http://172.16.1.57:8000/webhook/evolution",
         "webhookByEvents": true,
         "webhookBase64": true,
         "events": ["MESSAGES_UPSERT"]
     }
-}
+}'
 ```
 
 ### Requisitos
 
-- Stack `orquestador` debe estar corriendo en la misma red `vpn-proxy`
+- Orquestador debe estar corriendo en `172.16.1.57:8000`
 - Stack `agente_ia` debe estar corriendo para servicios de IA (STT, LLM, TTS)
+- Conectividad de red entre ambos servidores
 
 ### Verificar integracion
 
@@ -469,15 +493,15 @@ POST http://evolution:8080/webhook/set/whatsapp_main
 source .env
 
 # Verificar webhook Orquestador
-docker exec mautic curl -s "http://evolution:8080/webhook/find/whatsapp_main" \
+curl -s "http://localhost:8080/webhook/find/whatsapp_main" \
   -H "apikey: $AUTHENTICATION_API_KEY"
 
 # Verificar integracion Chatwoot
-docker exec mautic curl -s "http://evolution:8080/chatwoot/find/whatsapp_main" \
+curl -s "http://localhost:8080/chatwoot/find/whatsapp_main" \
   -H "apikey: $AUTHENTICATION_API_KEY"
 
-# Verificar que orquestador responde
-docker exec mautic curl -s "http://orquestador:80/health"
+# Verificar que orquestador responde (desde este servidor)
+curl -s "http://172.16.1.57:8000/health"
 ```
 
 ### Tipos de mensaje soportados
