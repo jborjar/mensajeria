@@ -539,25 +539,35 @@ Ver guia completa: [CHATWOOT.md](CHATWOOT.md)
 
 ## Mautic - Primeros Pasos
 
-Mautic requiere instalacion via CLI la primera vez:
+Mautic se configura via web la primera vez. Acceder a `http://IP_SERVIDOR:8081` y completar el wizard:
+
+### Paso 1: Base de Datos
+
+| Campo | Valor |
+|-------|-------|
+| Database Driver | MySQL PDO (Recommended) |
+| Database Host | `mariadb-messaging` |
+| Database Port | `3306` |
+| Database Name | `mautic` |
+| Database Username | `mautic` |
+| Database Password | (ver MAUTIC_DB_PASSWORD en .env) |
+| Database Table Prefix | (dejar vacio) |
+
+### Paso 2: Usuario Admin
+
+| Campo | Valor |
+|-------|-------|
+| Admin Username | `admin` |
+| Admin Password | **Debe cumplir**: mayusculas, minusculas, numeros, caracteres especiales |
+| First name | Tu nombre |
+| Last name | Tu apellido |
+| E-mail Address | Tu email |
+
+> **Importante**: El password debe ser fuerte (ej: `G3XP@Ns10nMautic`). Passwords debiles son rechazados.
+
+### Habilitar API (opcional)
 
 ```bash
-# Instalar Mautic (esperar ~2 min a que inicie primero)
-docker exec -w /var/www/html mautic sh -c 'php bin/console mautic:install "http://localhost" \
-  --db_driver="pdo_mysql" \
-  --db_host="mariadb-messaging" \
-  --db_port="3306" \
-  --db_name="mautic" \
-  --db_user="mautic" \
-  --db_password="TU_PASSWORD" \
-  --admin_email="admin@tudominio.com" \
-  --admin_password="TU_PASSWORD" \
-  --admin_firstname="Admin" \
-  --admin_lastname="Mautic" \
-  --admin_username="admin" \
-  --force'
-
-# Habilitar API (opcional, para integraciones)
 docker exec mautic sed -i "s/);/\t'api_enabled' => true,\n\t'api_enable_basic_auth' => true,\n);/" /var/www/html/config/local.php
 ```
 
