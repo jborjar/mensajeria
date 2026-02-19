@@ -100,6 +100,8 @@ services:
       - .env
     volumes:
       - ${DATA_PATH}/evolution/instances:/evolution/instances
+    ports:
+      - "8080:8080"
     networks:
       - ${NETWORK_NAME}
     depends_on:
@@ -147,6 +149,8 @@ services:
       - MAILER_SENDER_EMAIL=${CHATWOOT_MAILER_EMAIL}
     volumes:
       - ${DATA_PATH}/chatwoot/storage:/app/storage
+    ports:
+      - "3000:3000"
     networks:
       - ${NETWORK_NAME}
     depends_on:
@@ -261,6 +265,8 @@ services:
       - ${DATA_PATH}/mautic/config:/var/www/html/config
       - ${DATA_PATH}/mautic/logs:/var/www/html/var/logs
       - ${DATA_PATH}/mautic/media:/var/www/html/docroot/media
+    ports:
+      - "8081:80"
     networks:
       - ${NETWORK_NAME}
     depends_on:
@@ -337,5 +343,5 @@ services:
           memory: 256M
 
 networks:
-  vpn-proxy:
+  mensajeria:
     external: true
