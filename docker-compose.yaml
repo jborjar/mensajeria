@@ -343,5 +343,5 @@ services:
           memory: 256M
 
 networks:
-  mensajeria:
+  web:
     external: true
